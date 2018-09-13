@@ -6,7 +6,7 @@
 
 > OnInstantiateNextItem(GameObject obj, int index) 
 
-Then do what ever you want on data. This method trigger every time new item of scroll rect spawned.
+Then do what ever you want on data. This method trigger every time new item of scroll rect spawned. Open *Samples/Scripts/LSR_GridManager* for more information, and how to use
 
 - Also check folder prefab, i create 4 prefabs horizontal, vertical list, grid, so you want to create a scrollview, simple drag to your canvas.
 
