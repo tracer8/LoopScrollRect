@@ -16,7 +16,7 @@ namespace UnityEngine.UI
 
         public override void ProvideData(Transform transform, int idx)
         {
-            transform.SendMessage("ScrollCellIndex", idx);
+            //transform.SendMessage("ScrollCellIndex", idx);
         }
     }
 
@@ -31,7 +31,7 @@ namespace UnityEngine.UI
 
         public override void ProvideData(Transform transform, int idx)
         {
-            transform.SendMessage("ScrollCellContent", objectsToFill[idx]);
+            //transform.SendMessage("ScrollCellContent", objectsToFill[idx]);
         }
     }
 }

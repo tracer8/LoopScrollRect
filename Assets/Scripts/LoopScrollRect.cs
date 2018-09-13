@@ -11,6 +11,9 @@ namespace UnityEngine.UI
     [RequireComponent(typeof(RectTransform))]
     public abstract class LoopScrollRect : UIBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IEndDragHandler, IDragHandler, IScrollHandler, ICanvasElement, ILayoutElement, ILayoutGroup
     {
+
+        public Action<GameObject, int> OnInstantiateNextItem;
+
         //==========LoopScrollRect==========
         [Tooltip("Prefab Source")]
         public LoopScrollPrefabSource prefabSource;
@@ -333,6 +336,32 @@ namespace UnityEngine.UI
                             offset = reverseDirection ? (m_ViewBounds.min.y - m_ItemBounds.min.y) : (m_ViewBounds.max.y - m_ItemBounds.max.y);
                         else if (directionSign == 1)
                             offset = reverseDirection ? (m_ItemBounds.max.x - m_ViewBounds.max.x) : (m_ItemBounds.min.x - m_ViewBounds.min.x);
+                        // check if we cannot move on
+                        if (totalCount >= 0)
+                        {
+                            if (offset > 0 && itemTypeEnd == totalCount && !reverseDirection)
+                            {
+                                m_ItemBounds = GetBounds4Item(totalCount - 1);
+                                // reach bottom
+                                if ((directionSign == -1 && m_ItemBounds.min.y > m_ViewBounds.min.y) ||
+                                    (directionSign == 1 && m_ItemBounds.max.x < m_ViewBounds.max.x))
+                                {
+                                    needMoving = false;
+                                    break;
+                                }
+                            }
+                            else if (offset < 0 && itemTypeStart == 0 && reverseDirection)
+                            {
+                                m_ItemBounds = GetBounds4Item(0);
+                                if ((directionSign == -1 && m_ItemBounds.max.y < m_ViewBounds.max.y) ||
+                                    (directionSign == 1 && m_ItemBounds.min.x > m_ViewBounds.min.x))
+                                {
+                                    needMoving = false;
+                                    break;
+                                }
+                            }
+                        }
+
                         float maxMove = Time.deltaTime * speed;
                         if(Mathf.Abs(offset) < maxMove)
                         {
@@ -379,13 +408,15 @@ namespace UnityEngine.UI
 
         public void RefillCellsFromEnd(int offset = 0)
         {
-            //TODO: unsupported for Infinity or Grid yet
-            if (!Application.isPlaying || totalCount < 0 || contentConstraintCount > 1 || prefabSource == null)
+            if (!Application.isPlaying || prefabSource == null)
                 return;
             
             StopMovement();
             itemTypeEnd = reverseDirection ? offset : totalCount - offset;
             itemTypeStart = itemTypeEnd;
+
+            if (totalCount >= 0 && itemTypeStart % contentConstraintCount != 0)
+                Debug.LogWarning("Grid will become strange since we can't fill items in the last line");
 
             for (int i = m_Content.childCount - 1; i >= 0; i--)
             {
@@ -424,6 +455,9 @@ namespace UnityEngine.UI
             StopMovement();
             itemTypeStart = reverseDirection ? totalCount - offset : offset;
             itemTypeEnd = itemTypeStart;
+
+            if (totalCount >= 0 && itemTypeStart % contentConstraintCount != 0)
+                Debug.LogWarning("Grid will become strange since we can't fill items in the first line");
 
             // Don't `Canvas.ForceUpdateCanvases();` here, or it will new/delete cells to change itemTypeStart/End
             for (int i = m_Content.childCount - 1; i >= 0; i--)
@@ -585,6 +619,10 @@ namespace UnityEngine.UI
             nextItem.transform.SetParent(content, false);
             nextItem.gameObject.SetActive(true);
             dataSource.ProvideData(nextItem, itemIdx);
+
+            if (OnInstantiateNextItem != null)
+                OnInstantiateNextItem(nextItem.gameObject, itemIdx);
+
             return nextItem;
         }
         //==========LoopScrollRect==========

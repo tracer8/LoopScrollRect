@@ -13,7 +13,7 @@ namespace SG
     [AddComponentMenu("")]
     public class PoolObject : MonoBehaviour
     {
-        public string poolName;
+        public int poolId;
         //defines whether the object is waiting in pool or is in use
         public bool isPooled;
     }
@@ -33,10 +33,11 @@ namespace SG
         //the root obj for unused obj
         private GameObject rootObj;
         private PoolInflationType inflationType;
-        private string poolName;
+        private int poolId;
         private int objectsInUse = 0;
+        private string poolName;
 
-        public Pool(string poolName, GameObject poolObjectPrefab, GameObject rootPoolObj, int initialCount, PoolInflationType type)
+        public Pool(int poolId, GameObject poolObjectPrefab, GameObject rootPoolObj, int initialCount, PoolInflationType type)
         {
             if (poolObjectPrefab == null)
             {
@@ -45,10 +46,11 @@ namespace SG
 #endif
                 return;
             }
-            this.poolName = poolName;
+            this.poolId = poolId;
             this.inflationType = type;
-            this.rootObj = new GameObject(poolName + "Pool");
+            this.rootObj = new GameObject(string.Format("Pool Key: {0}-{1}", poolObjectPrefab.name, this.poolId));
             this.rootObj.transform.SetParent(rootPoolObj.transform, false);
+            this.poolName = poolObjectPrefab.name;
 
             // In case the origin one is Destroyed, we should keep at least one
             GameObject go = GameObject.Instantiate(poolObjectPrefab);
@@ -57,7 +59,7 @@ namespace SG
             {
                 po = go.AddComponent<PoolObject>();
             }
-            po.poolName = poolName;
+            po.poolId = poolId;
             AddObjectToPool(po);
 
             //populate the pool
@@ -106,7 +108,7 @@ namespace SG
                     increaseSize = availableObjStack.Count + Mathf.Max(objectsInUse, 0);
                 }
 #if UNITY_EDITOR
-                Debug.Log(string.Format("Growing pool {0}: {1} populated", poolName, increaseSize));
+                Debug.Log(string.Format("Growing pool {0}: {1} populated", poolId, increaseSize));
 #endif
                 if (increaseSize > 0)
                 {
@@ -133,7 +135,7 @@ namespace SG
         //o(1)
         public void ReturnObjectToPool(PoolObject po)
         {
-            if (poolName.Equals(po.poolName))
+            if (poolId.Equals(po.poolId))
             {
                 objectsInUse--;
                 /* we could have used availableObjStack.Contains(po) to check if this object is in pool.
@@ -152,7 +154,7 @@ namespace SG
             }
             else
             {
-                Debug.LogError(string.Format("Trying to add object to incorrect pool {0} {1}", po.poolName, poolName));
+                Debug.LogError(string.Format("Trying to add object to incorrect pool {0} {1}", po.poolId, poolId));
             }
         }
     }

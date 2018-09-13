@@ -10,7 +10,7 @@ namespace SG
     public class ResourceManager : MonoBehaviour
     {
         //obj pool
-        private Dictionary<string, Pool> poolDict = new Dictionary<string, Pool>();
+        private Dictionary<int, Pool> poolDict = new Dictionary<int, Pool>();
 
         private static ResourceManager mInstance = null;
 
@@ -20,10 +20,12 @@ namespace SG
             {
                 if (mInstance == null)
                 {
-                    GameObject GO = new GameObject("ResourceManager", typeof(ResourceManager));
+                    GameObject go = new GameObject("ResourceManager", typeof(ResourceManager));
+                    go.transform.localPosition = new Vector3(9999999, 9999999, 9999999);
                     // Kanglai: if we have `GO.hideFlags |= HideFlags.DontSave;`, we will encounter Destroy problem when exit playing
                     // However we should keep using this in Play mode only!
-                    mInstance = GO.GetComponent<ResourceManager>();
+                    mInstance = go.GetComponent<ResourceManager>();
+
                     if (Application.isPlaying)
                     {
                         DontDestroyOnLoad(mInstance.gameObject);
@@ -37,21 +39,25 @@ namespace SG
                 return mInstance;
             }
         }
-        public void InitPool(string poolName, int size, PoolInflationType type = PoolInflationType.DOUBLE)
+        public void InitPool(GameObject prefab, int size, PoolInflationType type = PoolInflationType.DOUBLE)
         {
-            if (poolDict.ContainsKey(poolName))
+            int key = prefab.GetInstanceID();
+
+            if (poolDict.ContainsKey(key))
             {
                 return;
             }
             else
             {
-                GameObject pb = Resources.Load<GameObject>(poolName);
+                GameObject pb = Instantiate(prefab);
+
                 if (pb == null)
                 {
-                    Debug.LogError("[ResourceManager] Invalide prefab name for pooling :" + poolName);
+                    Debug.LogError("[ResourceManager] Invalide prefab name for pooling :" + prefab.name);
                     return;
                 }
-                poolDict[poolName] = new Pool(poolName, pb, gameObject, size, type);
+
+                poolDict[key] = new Pool(key, pb, gameObject, size, type);
             }
         }
 
@@ -61,31 +67,32 @@ namespace SG
         /// </summary>
         /// <param name="poolName"></param>
         /// <returns></returns>
-        public GameObject GetObjectFromPool(string poolName, bool autoActive = true, int autoCreate = 0)
+        public GameObject GetObjectFromPool(GameObject prefab, bool autoActive = true, int autoCreate = 0)
         {
+            int key = prefab.GetInstanceID();
             GameObject result = null;
 
-            if (!poolDict.ContainsKey(poolName) && autoCreate > 0)
+            if (!poolDict.ContainsKey(key) && autoCreate > 0)
             {
-                InitPool(poolName, autoCreate, PoolInflationType.INCREMENT);
+                InitPool(prefab, autoCreate, PoolInflationType.INCREMENT);
             }
 
-            if (poolDict.ContainsKey(poolName))
+            if (poolDict.ContainsKey(key))
             {
-                Pool pool = poolDict[poolName];
+                Pool pool = poolDict[key];
                 result = pool.NextAvailableObject(autoActive);
                 //scenario when no available object is found in pool
 #if UNITY_EDITOR
                 if (result == null)
                 {
-                    Debug.LogWarning("[ResourceManager]:No object available in " + poolName);
+                    Debug.LogWarning("[ResourceManager]:No object available in " + prefab.name);
                 }
 #endif
             }
 #if UNITY_EDITOR
             else
             {
-                Debug.LogError("[ResourceManager]:Invalid pool name specified: " + poolName);
+                Debug.LogError("[ResourceManager]:Invalid pool name specified: " + prefab.name);
             }
 #endif
             return result;
@@ -107,14 +114,14 @@ namespace SG
             else
             {
                 Pool pool = null;
-                if (poolDict.TryGetValue(po.poolName, out pool))
+                if (poolDict.TryGetValue(po.poolId, out pool))
                 {
                     pool.ReturnObjectToPool(po);
                 }
 #if UNITY_EDITOR
                 else
                 {
-                    Debug.LogWarning("No pool available with name: " + po.poolName);
+                    Debug.LogWarning("No pool available with name: " + po.poolId);
                 }
 #endif
             }
@@ -133,10 +140,17 @@ namespace SG
 #endif
                 return;
             }
-            //set gameobject active flase to avoid a onEnable call when set parent
-            t.gameObject.SetActive(false);
-            t.SetParent(null, false);
             ReturnObjectToPool(t.gameObject);
+        }
+
+        public GameObject Create(GameObject prefab)
+        {
+            return Instantiate(prefab);
+        }
+
+        public void Remove(GameObject go)
+        {
+            Destroy(go);
         }
     }
 }
