@@ -10,5 +10,5 @@ Then do what ever you want on data. This method trigger every time new item of s
 
 - Also check folder prefab, i create 4 prefabs horizontal, vertical list, grid, so you want to create a scrollview, simple drag to your canvas.
 
-## Samples:
+## How to?
 - Open folder Samples, then every things you need on this.
